@@ -35,10 +35,11 @@ DIMENSIONES = {
 
 DIM_GAME = """
 INSERT INTO gold.dim_game (game_id, competition_key, referee_key, home_club_key, away_club_key, date_key,
-                           season, "round", game_date, home_club_goals, away_club_goals, stadium, attendance)
+                           season, "round", game_date, home_club_goals, away_club_goals, stadium, attendance, is_synthetic)
 SELECT g.game_id, dc.competition_key, dr.referee_key, dh.club_key, da.club_key,
        to_char(g.game_date, 'YYYYMMDD')::int, g.season, g."round", g.game_date,
-       g.home_club_goals, g.away_club_goals, g.stadium, g.attendance
+       g.home_club_goals, g.away_club_goals, g.stadium, g.attendance,
+       (g.origin = 'sintetico')
 FROM silver.games g
 JOIN gold.dim_competition dc ON dc.competition_id = g.competition_id
 JOIN gold.dim_referee dr ON dr.referee_name = g.referee
@@ -48,16 +49,17 @@ ON CONFLICT (game_id) DO UPDATE SET competition_key=EXCLUDED.competition_key, re
   home_club_key=EXCLUDED.home_club_key, away_club_key=EXCLUDED.away_club_key, date_key=EXCLUDED.date_key,
   season=EXCLUDED.season, "round"=EXCLUDED."round", game_date=EXCLUDED.game_date,
   home_club_goals=EXCLUDED.home_club_goals, away_club_goals=EXCLUDED.away_club_goals,
-  stadium=EXCLUDED.stadium, attendance=EXCLUDED.attendance"""
+  stadium=EXCLUDED.stadium, attendance=EXCLUDED.attendance, is_synthetic=EXCLUDED.is_synthetic"""
 
 # Hechos: se cargan por año (rango de fechas) para acotar el tamaño de cada transacción.
 FACT_EVENTS = """
 INSERT INTO gold.fact_events (game_event_id, date_key, game_key, competition_key, club_key, player_key,
-                              assist_player_key, referee_key, event_type_key, "minute", minute_bucket, is_home)
+                              assist_player_key, referee_key, event_type_key, "minute", minute_bucket, is_home, is_synthetic)
 SELECT e.game_event_id, to_char(e.game_date, 'YYYYMMDD')::int, dg.game_key, dg.competition_key, dc.club_key,
        dp.player_key, da.player_key, dg.referee_key, et.event_type_key, e."minute",
        CASE WHEN e."minute" IS NULL THEN NULL ELSE LEAST(e."minute" / 15, 6) END,
-       (dc.club_key = dg.home_club_key)
+       (dc.club_key = dg.home_club_key),
+       (e.origin = 'sintetico')
 FROM silver.game_events e
 JOIN gold.dim_game dg ON dg.game_id = e.game_id
 JOIN gold.dim_club dc ON dc.club_id = e.club_id
@@ -69,18 +71,19 @@ ON CONFLICT (game_event_id, date_key) DO UPDATE SET game_key=EXCLUDED.game_key,
   competition_key=EXCLUDED.competition_key, club_key=EXCLUDED.club_key, player_key=EXCLUDED.player_key,
   assist_player_key=EXCLUDED.assist_player_key, referee_key=EXCLUDED.referee_key,
   event_type_key=EXCLUDED.event_type_key, "minute"=EXCLUDED."minute",
-  minute_bucket=EXCLUDED.minute_bucket, is_home=EXCLUDED.is_home
+  minute_bucket=EXCLUDED.minute_bucket, is_home=EXCLUDED.is_home, is_synthetic=EXCLUDED.is_synthetic
 WHERE (gold.fact_events.game_key, gold.fact_events.club_key, gold.fact_events.player_key,
        gold.fact_events.assist_player_key, gold.fact_events.event_type_key, gold.fact_events."minute",
-       gold.fact_events.is_home)
+       gold.fact_events.is_home, gold.fact_events.is_synthetic)
   IS DISTINCT FROM (EXCLUDED.game_key, EXCLUDED.club_key, EXCLUDED.player_key, EXCLUDED.assist_player_key,
-                    EXCLUDED.event_type_key, EXCLUDED."minute", EXCLUDED.is_home)"""
+                    EXCLUDED.event_type_key, EXCLUDED."minute", EXCLUDED.is_home, EXCLUDED.is_synthetic)"""
 
 FACT_APPEARANCES = """
 INSERT INTO gold.fact_appearances (appearance_id, date_key, game_key, player_key, club_key, competition_key,
-                                   goals, assists, yellow_cards, red_cards, minutes_played)
+                                   goals, assists, yellow_cards, red_cards, minutes_played, is_synthetic)
 SELECT a.appearance_id, to_char(a.game_date, 'YYYYMMDD')::int, dg.game_key, dp.player_key, dc.club_key,
-       dg.competition_key, a.goals, a.assists, a.yellow_cards, a.red_cards, a.minutes_played
+       dg.competition_key, a.goals, a.assists, a.yellow_cards, a.red_cards, a.minutes_played,
+       (a.origin = 'sintetico')
 FROM silver.appearances a
 JOIN gold.dim_game dg ON dg.game_id = a.game_id
 JOIN gold.dim_player dp ON dp.player_id = a.player_id
@@ -89,25 +92,27 @@ WHERE a.game_date >= %(d0)s AND a.game_date < %(d1)s
 ON CONFLICT (appearance_id) DO UPDATE SET date_key=EXCLUDED.date_key, game_key=EXCLUDED.game_key,
   player_key=EXCLUDED.player_key, club_key=EXCLUDED.club_key, competition_key=EXCLUDED.competition_key,
   goals=EXCLUDED.goals, assists=EXCLUDED.assists, yellow_cards=EXCLUDED.yellow_cards,
-  red_cards=EXCLUDED.red_cards, minutes_played=EXCLUDED.minutes_played
+  red_cards=EXCLUDED.red_cards, minutes_played=EXCLUDED.minutes_played, is_synthetic=EXCLUDED.is_synthetic
 WHERE (gold.fact_appearances.date_key, gold.fact_appearances.game_key, gold.fact_appearances.player_key,
        gold.fact_appearances.club_key, gold.fact_appearances.goals, gold.fact_appearances.assists,
-       gold.fact_appearances.yellow_cards, gold.fact_appearances.red_cards, gold.fact_appearances.minutes_played)
+       gold.fact_appearances.yellow_cards, gold.fact_appearances.red_cards, gold.fact_appearances.minutes_played,
+       gold.fact_appearances.is_synthetic)
   IS DISTINCT FROM (EXCLUDED.date_key, EXCLUDED.game_key, EXCLUDED.player_key, EXCLUDED.club_key,
                     EXCLUDED.goals, EXCLUDED.assists, EXCLUDED.yellow_cards, EXCLUDED.red_cards,
-                    EXCLUDED.minutes_played)"""
+                    EXCLUDED.minutes_played, EXCLUDED.is_synthetic)"""
 
 FACT_VALUATIONS = """
-INSERT INTO gold.fact_valuations (date_key, player_key, club_key, market_value_eur)
-SELECT to_char(v.valuation_date, 'YYYYMMDD')::int, dp.player_key, dc.club_key, v.market_value_in_eur
+INSERT INTO gold.fact_valuations (date_key, player_key, club_key, market_value_eur, is_synthetic)
+SELECT to_char(v.valuation_date, 'YYYYMMDD')::int, dp.player_key, dc.club_key, v.market_value_in_eur,
+       (v.origin = 'sintetico')
 FROM silver.player_valuations v
 JOIN gold.dim_player dp ON dp.player_id = v.player_id
 LEFT JOIN gold.dim_club dc ON dc.club_id = v.current_club_id
 WHERE v.valuation_date >= %(d0)s AND v.valuation_date < %(d1)s
 ON CONFLICT (player_key, date_key) DO UPDATE SET club_key=EXCLUDED.club_key,
-  market_value_eur=EXCLUDED.market_value_eur
-WHERE (gold.fact_valuations.club_key, gold.fact_valuations.market_value_eur)
-  IS DISTINCT FROM (EXCLUDED.club_key, EXCLUDED.market_value_eur)"""
+  market_value_eur=EXCLUDED.market_value_eur, is_synthetic=EXCLUDED.is_synthetic
+WHERE (gold.fact_valuations.club_key, gold.fact_valuations.market_value_eur, gold.fact_valuations.is_synthetic)
+  IS DISTINCT FROM (EXCLUDED.club_key, EXCLUDED.market_value_eur, EXCLUDED.is_synthetic)"""
 
 
 def _ejecutar(conn, audit, tabla, sql_leidas, sql_carga, params=None):

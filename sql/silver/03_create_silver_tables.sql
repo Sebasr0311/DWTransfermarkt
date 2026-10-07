@@ -29,7 +29,9 @@ CREATE TABLE IF NOT EXISTS silver.games (
   away_club_id INT NOT NULL REFERENCES silver.clubs(club_id),
   home_club_goals SMALLINT NOT NULL DEFAULT 0 CHECK (home_club_goals >= 0),
   away_club_goals SMALLINT NOT NULL DEFAULT 0 CHECK (away_club_goals >= 0),
-  stadium TEXT NOT NULL, attendance INT CHECK (attendance >= 0), referee TEXT NOT NULL);
+  stadium TEXT NOT NULL, attendance INT CHECK (attendance >= 0), referee TEXT NOT NULL,
+  origin VARCHAR(10) NOT NULL DEFAULT 'real' CHECK (origin IN ('real','sintetico')),
+  synthetic_batch UUID NULL);
 
 CREATE TABLE IF NOT EXISTS silver.appearances (
   appearance_id VARCHAR(40) PRIMARY KEY,
@@ -41,7 +43,9 @@ CREATE TABLE IF NOT EXISTS silver.appearances (
   assists SMALLINT NOT NULL DEFAULT 0 CHECK (assists >= 0),
   yellow_cards SMALLINT NOT NULL DEFAULT 0 CHECK (yellow_cards >= 0),
   red_cards SMALLINT NOT NULL DEFAULT 0 CHECK (red_cards >= 0),
-  minutes_played SMALLINT NOT NULL DEFAULT 0 CHECK (minutes_played BETWEEN 0 AND 130));
+  minutes_played SMALLINT NOT NULL DEFAULT 0 CHECK (minutes_played BETWEEN 0 AND 130),
+  origin VARCHAR(10) NOT NULL DEFAULT 'real' CHECK (origin IN ('real','sintetico')),
+  synthetic_batch UUID NULL);
 
 CREATE TABLE IF NOT EXISTS silver.game_events (
   game_event_id VARCHAR(64) PRIMARY KEY,
@@ -52,13 +56,17 @@ CREATE TABLE IF NOT EXISTS silver.game_events (
   club_id INT NOT NULL REFERENCES silver.clubs(club_id),
   player_id INT REFERENCES silver.players(player_id),
   description TEXT,
-  player_in_id INT, player_assist_id INT);
+  player_in_id INT, player_assist_id INT,
+  origin VARCHAR(10) NOT NULL DEFAULT 'real' CHECK (origin IN ('real','sintetico')),
+  synthetic_batch UUID NULL);
 
 CREATE TABLE IF NOT EXISTS silver.player_valuations (
   player_id INT NOT NULL REFERENCES silver.players(player_id),
   valuation_date DATE NOT NULL,
   market_value_in_eur NUMERIC(14,2) CHECK (market_value_in_eur >= 0),
   current_club_id INT,
+  origin VARCHAR(10) NOT NULL DEFAULT 'real' CHECK (origin IN ('real','sintetico')),
+  synthetic_batch UUID NULL,
   PRIMARY KEY (player_id, valuation_date));
 
 -- Índices de apoyo para las FK usadas en joins del ETL y filtrado por fecha

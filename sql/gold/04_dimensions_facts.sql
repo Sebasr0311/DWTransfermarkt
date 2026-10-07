@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS gold.dim_game (
   away_club_key INT NOT NULL REFERENCES gold.dim_club(club_key),
   date_key INT NOT NULL REFERENCES gold.dim_date(date_key),
   season SMALLINT NOT NULL, "round" TEXT, game_date DATE NOT NULL,
-  home_club_goals SMALLINT, away_club_goals SMALLINT, stadium TEXT, attendance INT);
+  home_club_goals SMALLINT, away_club_goals SMALLINT, stadium TEXT, attendance INT,
+  is_synthetic BOOLEAN NOT NULL DEFAULT FALSE);
 
 -- Hechos
 CREATE TABLE IF NOT EXISTS gold.fact_events (
@@ -49,6 +50,7 @@ CREATE TABLE IF NOT EXISTS gold.fact_events (
   referee_key INT NOT NULL REFERENCES gold.dim_referee(referee_key),
   event_type_key INT NOT NULL REFERENCES gold.dim_event_type(event_type_key),
   "minute" SMALLINT, minute_bucket SMALLINT, is_home BOOLEAN,
+  is_synthetic BOOLEAN NOT NULL DEFAULT FALSE,
   PRIMARY KEY (event_key, date_key)
 ) PARTITION BY RANGE (date_key);
 
@@ -60,7 +62,8 @@ CREATE TABLE IF NOT EXISTS gold.fact_appearances (
   player_key INT NOT NULL REFERENCES gold.dim_player(player_key),
   club_key INT NOT NULL REFERENCES gold.dim_club(club_key),
   competition_key INT NOT NULL REFERENCES gold.dim_competition(competition_key),
-  goals SMALLINT, assists SMALLINT, yellow_cards SMALLINT, red_cards SMALLINT, minutes_played SMALLINT);
+  goals SMALLINT, assists SMALLINT, yellow_cards SMALLINT, red_cards SMALLINT, minutes_played SMALLINT,
+  is_synthetic BOOLEAN NOT NULL DEFAULT FALSE);
 
 CREATE TABLE IF NOT EXISTS gold.fact_valuations (
   valuation_key BIGSERIAL PRIMARY KEY,
@@ -68,6 +71,7 @@ CREATE TABLE IF NOT EXISTS gold.fact_valuations (
   player_key INT NOT NULL REFERENCES gold.dim_player(player_key),
   club_key INT REFERENCES gold.dim_club(club_key),
   market_value_eur NUMERIC(14,2),
+  is_synthetic BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE (player_key, date_key));
 
 -- Crea particiones anuales de fact_events (date_key = AAAAMMDD) para el rango de años dado
