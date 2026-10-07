@@ -1,0 +1,71 @@
+================================================================================
+          DWH TRANSFERMARKT - STACK TECNOLÓGICO Y HERRAMIENTAS UTILIZADAS
+================================================================================
+
+1. MOTOR DE BASE DE DATOS Y GESTIÓN DE ALMACENAMIENTO
+--------------------------------------------------------------------------------
+- PostgreSQL (v14+ / v16 / v18 local):
+  * Motor relacional para el Data Warehouse.
+  * Implementación de Arquitectura Medallón mediante esquemas:
+    - bronze (ingesta cruda, tipos texto, carga por chunks con COPY).
+    - silver (datos tipados, normalizados, reglas de calidad EDA E01-E10, PK/FK, CHECK).
+    - gold (modelo estrella dimensional: dimensiones, tablas de hechos y agregaciones).
+    - meta (auditoría de pipeline en meta.etl_audit y registro de rechazos en meta.etl_rejected).
+  * Particionamiento declarativo por rango (Range Partitioning) anual en gold.fact_events.
+  * Vistas materializadas con índices únicos para refresco concurrente (REFRESH MATERIALIZED VIEW CONCURRENTLY).
+  * Optimización física con índices B-Tree y Hash.
+  * Funciones y lógica en PL/pgSQL y SQL set-based.
+
+2. LENGUAJE Y ENTORNO DE DESARROLLO
+--------------------------------------------------------------------------------
+- Python (v3.10+ / v3.13):
+  * Lenguaje principal para la orquestación del pipeline ETL y scripts de automatización.
+  * Entorno virtual aislado (venv).
+- PowerShell (Windows) / Bash:
+  * Entorno de consola para automatización de comandos del sistema operativo y CLI.
+
+3. LIBRERÍAS Y DEPENDENCIAS DE PYTHON (requirements.txt)
+--------------------------------------------------------------------------------
+- psycopg2-binary:
+  * Driver PostgreSQL nativo en C de alto rendimiento.
+  * Manejo de transacciones, server-side cursors y ejecución masiva set-based.
+- python-dotenv:
+  * Carga segura de variables de entorno desde .env sin versionar credenciales.
+- pytest:
+  * Framework de pruebas unitarias y de integración para verificar esquemas, huérfanos,
+    duplicados, rangos de datos, linaje, idempotencia y reversibilidad.
+
+4. CLIENTES DE BASE DE DATOS Y CONSULTA
+--------------------------------------------------------------------------------
+- DBeaver Community Edition:
+  * Cliente gráfico multipropósito para administración de PostgreSQL, visualización de datos,
+    navegación de esquemas y generación de diagramas Entidad-Relación (ER).
+- psql:
+  * Interfaz de línea de comandos interactiva oficial de PostgreSQL.
+
+5. INFRAESTRUCTURA Y VIRTUALIZACIÓN
+--------------------------------------------------------------------------------
+- Docker & Docker Compose:
+  * docker-compose.yml con contenedor oficial de PostgreSQL (postgres:16-alpine)
+    para despliegue reproducible en cualquier sistema operativo.
+
+6. CONTROL DE VERSIONES Y COLABORACIÓN
+--------------------------------------------------------------------------------
+- Git:
+  * Control de versiones local con estándar Conventional Commits.
+- GitHub:
+  * Repositorio remoto centralizado del proyecto (https://github.com/Sebasr0311/DWTransfermarkt.git).
+
+7. ORIGEN Y FORMATOS DE DATOS
+--------------------------------------------------------------------------------
+- Datasets de Transfermarkt:
+  * Repositorio abierto dcaribou/transfermarkt-datasets (Kaggle / GitHub).
+  * Archivos CSV (Comma-Separated Values) con compresión GZIP (.csv.gz)
+    abarcando competiciones, clubes, jugadores, partidos, valoraciones, apariciones y eventos.
+
+8. DESTINO DE CONSUMO ANALÍTICO Y REPORTING
+--------------------------------------------------------------------------------
+- Power BI:
+  * Herramienta de Business Intelligence conectada a la capa gold para la creación de tableros,
+    KPIs y análisis multidimensional.
+================================================================================
