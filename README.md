@@ -26,14 +26,19 @@ copy .env.example .env     # editar credenciales (el .env no se versiona)
 
 ## Uso
 ```powershell
-docker compose up -d                      # solo si no tienes PostgreSQL local
-python scripts/setup_database.py          # 1) crea la base, esquemas y tablas
-python -m etl.run_pipeline --layer all --chunk-size 100000   # 2) y 3) carga + silver + gold
-python scripts/validate.py                # 4) validaciones, volumetría y tiempos
-pytest                                    # pruebas
+docker compose up -d                                         # solo si no tienes PostgreSQL local
+python scripts/setup_database.py                             # 1) crea la base, esquemas y tablas
+python -m etl.run_pipeline --layer all --chunk-size 100000   # 2) carga datos reales (bronze -> silver -> gold)
+python -m etl.run_pipeline --layer expand --target-total 10565088  # 3) expansión controlada a 10,5 M de registros
+python scripts/validate.py                                   # 4) validaciones, volumetría y tiempos
+pytest                                                       # 5) pruebas automáticas
 ```
-Capas por separado: `--layer bronze|silver|gold`. El pipeline es idempotente.
+Capas por separado: `--layer bronze|silver|gold|expand`.
+Para revertir los datos sintéticos y regresar al estado base real:
+```powershell
+python -m etl.run_pipeline --layer expand --rollback
+```
 
 ## Estructura
-`sql/` DDL por capa · `etl/` pipeline Python · `scripts/` utilidades · `docs/` documentación por capa · `tests/` pytest.
-Más detalle en `docs/bronze.md`, `docs/silver.md`, `docs/gold.md` y `docs/reglas_eda.md`.
+`sql/` DDL por capa · `etl/` pipeline Python (`etl/expansion/`) · `scripts/` utilidades · `docs/` documentación · `tests/` pytest.
+Más detalle en `docs/bronze.md`, `docs/silver.md`, `docs/gold.md`, `docs/expansion.md`, `docs/volumetria.md` y `docs/reglas_eda.md`.
