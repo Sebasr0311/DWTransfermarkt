@@ -14,7 +14,7 @@ ENCODINGS = ("utf-8", "latin-1")  # RNF09: utf-8 con respaldo latin-1
 def _bronze_columns(cur, table: str) -> list[str]:
     cur.execute(
         "SELECT column_name FROM information_schema.columns "
-        "WHERE table_schema='bronze' AND table_name=%s AND column_name NOT LIKE '\\_%%' "
+        "WHERE table_schema='bronze' AND table_name=%s AND left(column_name, 1) != '_' "
         "ORDER BY ordinal_position", (table,))
     return [r[0] for r in cur.fetchall()]
 

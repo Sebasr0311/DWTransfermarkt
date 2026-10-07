@@ -61,9 +61,12 @@ CREATE TABLE IF NOT EXISTS silver.player_valuations (
   current_club_id INT,
   PRIMARY KEY (player_id, valuation_date));
 
--- Índices de apoyo para las FK usadas en joins del ETL
+-- Índices de apoyo para las FK usadas en joins del ETL y filtrado por fecha
 CREATE INDEX IF NOT EXISTS ix_s_appearances_game ON silver.appearances (game_id);
 CREATE INDEX IF NOT EXISTS ix_s_appearances_player ON silver.appearances (player_id);
+CREATE INDEX IF NOT EXISTS ix_s_appearances_date ON silver.appearances (game_date);
 CREATE INDEX IF NOT EXISTS ix_s_events_game ON silver.game_events (game_id);
 CREATE INDEX IF NOT EXISTS ix_s_events_player ON silver.game_events (player_id);
+CREATE INDEX IF NOT EXISTS ix_s_events_date ON silver.game_events (game_date);
 CREATE INDEX IF NOT EXISTS ix_s_games_date ON silver.games (game_date);
+CREATE INDEX IF NOT EXISTS ix_s_valuations_date ON silver.player_valuations (valuation_date);
