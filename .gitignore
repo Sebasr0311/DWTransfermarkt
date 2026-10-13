@@ -14,3 +14,8 @@ data/raw/*
 # Editor (se conserva solo settings.json)
 .vscode/*
 !.vscode/settings.json
+
+# Archivos temporales de Office / SO
+~$*
+.DS_Store
+Thumbs.db
