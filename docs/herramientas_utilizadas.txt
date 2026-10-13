@@ -4,36 +4,40 @@
 
 1. MOTOR DE BASE DE DATOS Y GESTIÓN DE ALMACENAMIENTO
 --------------------------------------------------------------------------------
-- PostgreSQL (v14+ / v16 / v18 local):
+- PostgreSQL (v14+ / v16 en Docker / v18 local):
   * Motor relacional para el Data Warehouse.
-  * Implementación de Arquitectura Medallón mediante esquemas:
-    - bronze (ingesta cruda, tipos texto, carga por chunks con COPY).
-    - silver (datos tipados, normalizados, reglas de calidad EDA E01-E10, PK/FK, CHECK).
-    - gold (modelo estrella dimensional: dimensiones, tablas de hechos y agregaciones).
-    - meta (auditoría de pipeline en meta.etl_audit y registro de rechazos en meta.etl_rejected).
-  * Particionamiento declarativo por rango (Range Partitioning) anual en gold.fact_events.
-  * Vistas materializadas con índices únicos para refresco concurrente (REFRESH MATERIALIZED VIEW CONCURRENTLY).
-  * Optimización física con índices B-Tree y Hash.
-  * Funciones y lógica en PL/pgSQL y SQL set-based.
+  * Implementación de Arquitectura Medallón mediante esquemas aislados:
+    - bronze: Ingesta cruda de CSVs, tipos de datos TEXT, carga por bloques masivos con COPY.
+    - silver: Datos tipados, limpios, normalizados, reglas de calidad EDA E01-E10, PK/FK, CHECK.
+    - gold: Modelo de Constelación de Hechos (Kimball Bus Architecture) con dimensiones conformadas:
+      * Dimensiones: dim_fecha, dim_competicion, dim_club, dim_jugador, dim_arbitro, dim_tipo_evento, dim_partido.
+      * Tablas de Hechos: hecho_rendimiento_jugador, hecho_eventos_partido, hecho_valoraciones_mercado.
+      * Agregaciones Materializadas: agg_jugador_temporada_liga, agg_club_temporada, agg_eventos_15min, agg_disciplina_arbitro, agg_local_visitante.
+    - meta: Auditoría transversal de pipeline en meta.etl_audit y registro de calidad/descartes en meta.etl_rejected.
+  * Particionamiento declarativo por rango (Range Partitioning) anual en gold.hecho_eventos_partido (1990–2035).
+  * Vistas materializadas con índices únicos para refresco concurrente sin bloqueo (REFRESH MATERIALIZED VIEW CONCURRENTLY).
+  * Optimización física de almacenamiento con índices B-Tree y Hash.
+  * Funciones y lógica procedimental en PL/pgSQL y consultas set-based.
 
 2. LENGUAJE Y ENTORNO DE DESARROLLO
 --------------------------------------------------------------------------------
-- Python (v3.10+ / v3.13):
+- Python (v3.10+ / v3.12 / v3.13 / v3.14):
   * Lenguaje principal para la orquestación del pipeline ETL y scripts de automatización.
-  * Entorno virtual aislado (venv).
-- PowerShell (Windows) / Bash:
-  * Entorno de consola para automatización de comandos del sistema operativo y CLI.
+  * Entorno virtual aislado (.venv) gestionado con venv / uv.
+- PowerShell (Windows) / Bash (Linux):
+  * Entorno de consola y scripting para automatización de comandos CLI del sistema operativo.
 
 3. LIBRERÍAS Y DEPENDENCIAS DE PYTHON (requirements.txt)
 --------------------------------------------------------------------------------
+- pandas:
+  * Lectura eficiente por chunks (RNF01) y normalización tabular durante la ingesta cruda.
 - psycopg2-binary:
-  * Driver PostgreSQL nativo en C de alto rendimiento.
-  * Manejo de transacciones, server-side cursors y ejecución masiva set-based.
+  * Driver PostgreSQL nativo en C de alto rendimiento para ejecución masiva y transacciones.
 - python-dotenv:
-  * Carga segura de variables de entorno desde .env sin versionar credenciales.
+  * Carga segura de variables de entorno desde .env sin versionar credenciales sensibles.
 - pytest:
-  * Framework de pruebas unitarias y de integración para verificar esquemas, huérfanos,
-    duplicados, rangos de datos, linaje, idempotencia y reversibilidad.
+  * Framework de pruebas unitarias y de integración para verificación automatizada de esquemas,
+    claves foráneas, unicidad, integridad referencial, linaje, idempotencia y reversibilidad.
 
 4. CLIENTES DE BASE DE DATOS Y CONSULTA
 --------------------------------------------------------------------------------
@@ -41,18 +45,18 @@
   * Cliente gráfico multipropósito para administración de PostgreSQL, visualización de datos,
     navegación de esquemas y generación de diagramas Entidad-Relación (ER).
 - psql:
-  * Interfaz de línea de comandos interactiva oficial de PostgreSQL.
+  * Interfaz de línea de comandos oficial de PostgreSQL para administración y scripts.
 
 5. INFRAESTRUCTURA Y VIRTUALIZACIÓN
 --------------------------------------------------------------------------------
 - Docker & Docker Compose:
-  * docker-compose.yml con contenedor oficial de PostgreSQL (postgres:16-alpine)
-    para despliegue reproducible en cualquier sistema operativo.
+  * docker-compose.yml configurado con la imagen oficial postgres:16 para despliegue
+    reproducible e independiente del entorno del host.
 
 6. CONTROL DE VERSIONES Y COLABORACIÓN
 --------------------------------------------------------------------------------
 - Git:
-  * Control de versiones local con estándar Conventional Commits.
+  * Control de versiones distribuido con flujo de trabajo basado en Conventional Commits.
 - GitHub:
   * Repositorio remoto centralizado del proyecto (https://github.com/Sebasr0311/DWTransfermarkt.git).
 
@@ -60,12 +64,12 @@
 --------------------------------------------------------------------------------
 - Datasets de Transfermarkt:
   * Repositorio abierto dcaribou/transfermarkt-datasets (Kaggle / GitHub).
-  * Archivos CSV (Comma-Separated Values) con compresión GZIP (.csv.gz)
-    abarcando competiciones, clubes, jugadores, partidos, valoraciones, apariciones y eventos.
+  * Archivos CSV (Comma-Separated Values) que abarcan competiciones, clubes, jugadores,
+    partidos, valoraciones, apariciones y eventos de juego.
 
 8. DESTINO DE CONSUMO ANALÍTICO Y REPORTING
 --------------------------------------------------------------------------------
 - Power BI:
-  * Herramienta de Business Intelligence conectada a la capa gold para la creación de tableros,
-    KPIs y análisis multidimensional.
+  * Herramienta de Business Intelligence conectada a la capa Gold para la creación de tableros,
+    cuadros de mando, KPIs y análisis multidimensional.
 ================================================================================

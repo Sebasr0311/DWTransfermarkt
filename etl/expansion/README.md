@@ -1,17 +1,19 @@
 # Módulo de Expansión Controlada de Datos Sintéticos (`etl/expansion`)
 
-Este paquete implementa la expansión controlada, determinista, trazable y reversible del Data Warehouse `DWTransfermarkt` desde el volumen base real (~3,62 millones de registros en plata) hasta cumplir con la meta de volumetría de la propuesta (**>= 10.565.088 registros**).
+Este paquete implementa la expansión controlada, determinista, trazable y reversible del Data Warehouse `DWTransfermarkt` desde el volumen base real (~3,62 millones de registros en plata) hasta cumplir con la meta de volumetría de la propuesta (**>= 10.565.088 registros**, alcanzando **10.565.092 registros**).
+
+---
 
 ## Principios de Diseño
 
 1. **Honestidad y Trazabilidad Permanente:**
    - En la capa `silver`, cada registro generado incluye `origin = 'sintetico'` y el identificador `synthetic_batch` (UUID).
-   - En la capa `gold`, las dimensiones y hechos generados incluyen `is_synthetic = TRUE`.
+   - En la capa `gold`, las dimensiones y hechos generados incluyen `es_sintetico = TRUE` (en `dim_partido`, `hecho_eventos_partido`, `hecho_rendimiento_jugador` y `hecho_valoraciones_mercado`).
    - Ningún dato sintético puede confundirse con datos reales.
 
 2. **Inalterabilidad de Datos Reales:**
-   - Los registros reales (`origin = 'real'`, `is_synthetic = FALSE`) no se modifican, eliminan ni reordenan.
-   - Su integridad se audita mediante conteos exactos y sumas de verificación criptográficas/hash por tabla.
+   - Los registros reales (`origin = 'real'`, `es_sintetico = FALSE`) no se modifican, eliminan ni reordenan.
+   - Su integridad se audita mediante conteos exactos y sumas de verificación hash (`hashtext`) por tabla.
 
 3. **Integridad Referencial Estricta (0 Huérfanos):**
    - Los partidos sintéticos (`silver.games`, IDs `>= 900000000`) conservan referencias a competiciones, clubes, estadios y árbitros reales.
@@ -23,19 +25,21 @@ Este paquete implementa la expansión controlada, determinista, trazable y rever
 
 5. **Idempotencia y Reversibilidad:**
    - Ejecutar la expansión ejecuta automáticamente un rollback de corridas sintéticas previas.
-   - El flag `--rollback` elimina todo registro sintético de `silver` y `gold`, refresca las vistas materializadas y devuelve la base de datos exactamente a su estado base original.
+   - El flag `--rollback` elimina todo registro sintético de `silver` y `gold`, refresca las vistas materializadas y devuelve la base de datos exactamente a su estado base original de **3.625.525 registros reales intactos**.
 
 6. **Aislamiento Analítico:**
-   - Las vistas materializadas de negocio (`gold.agg_*`) calculan métricas exclusivamente sobre `is_synthetic = FALSE`, asegurando que las estadísticas de negocio no sufran distorsión por las pruebas de volumen.
+   - Las vistas materializadas de negocio (`gold.agg_*`) calculan métricas exclusivamente sobre `es_sintetico = FALSE`, asegurando que las estadísticas de negocio no sufran distorsión por las pruebas de volumen.
+
+---
 
 ## Comandos de Ejecución
 
 ### Expansión de volumen:
-```bash
+```powershell
 python -m etl.run_pipeline --layer expand --target-total 10565088
 ```
 
 ### Reversión completa (Rollback):
-```bash
+```powershell
 python -m etl.run_pipeline --layer expand --rollback
 ```

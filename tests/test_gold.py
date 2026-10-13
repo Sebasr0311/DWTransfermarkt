@@ -1,4 +1,4 @@
-"""Pruebas de la capa oro: integridad de hechos/dimensiones e idempotencia."""
+"""Pruebas de la capa oro: integridad de la constelación de hechos/dimensiones e idempotencia."""
 import uuid
 
 import pytest
@@ -7,8 +7,18 @@ from etl.common.db import get_connection
 from etl.gold import load_gold, refresh_aggregations
 from etl.silver import transform_silver
 
-TABLAS_GOLD = ["dim_date", "dim_competition", "dim_club", "dim_player", "dim_referee", "dim_event_type",
-               "dim_game", "fact_events", "fact_appearances", "fact_valuations"]
+TABLAS_GOLD = [
+    "dim_fecha",
+    "dim_competicion",
+    "dim_club",
+    "dim_jugador",
+    "dim_arbitro",
+    "dim_tipo_evento",
+    "dim_partido",
+    "hecho_eventos_partido",
+    "hecho_rendimiento_jugador",
+    "hecho_valoraciones_mercado",
+]
 
 
 @pytest.fixture(scope="module")
@@ -28,23 +38,23 @@ def _conteos(cur):
 
 def test_hechos_sin_huerfanos(cur):
     consultas = [
-        "SELECT count(*) FROM gold.fact_events f LEFT JOIN gold.dim_game d USING (game_key) WHERE d.game_id IS NULL",
-        "SELECT count(*) FROM gold.fact_events f LEFT JOIN gold.dim_club d USING (club_key) WHERE d.club_id IS NULL",
-        "SELECT count(*) FROM gold.fact_appearances f LEFT JOIN gold.dim_player d USING (player_key) WHERE d.player_id IS NULL",
-        "SELECT count(*) FROM gold.fact_valuations f LEFT JOIN gold.dim_player d USING (player_key) WHERE d.player_id IS NULL",
+        "SELECT count(*) FROM gold.hecho_eventos_partido f LEFT JOIN gold.dim_partido d USING (partido_key) WHERE d.partido_id IS NULL",
+        "SELECT count(*) FROM gold.hecho_eventos_partido f LEFT JOIN gold.dim_club d USING (club_key) WHERE d.club_id IS NULL",
+        "SELECT count(*) FROM gold.hecho_rendimiento_jugador f LEFT JOIN gold.dim_jugador d USING (jugador_key) WHERE d.jugador_id IS NULL",
+        "SELECT count(*) FROM gold.hecho_valoraciones_mercado f LEFT JOIN gold.dim_jugador d USING (jugador_key) WHERE d.jugador_id IS NULL",
     ]
     for q in consultas:
         cur.execute(q)
         assert cur.fetchone()[0] == 0
 
 
-def test_minute_bucket_en_rango(cur):
-    cur.execute("SELECT count(*) FROM gold.fact_events WHERE minute_bucket NOT BETWEEN 0 AND 6")
+def test_franja_15min_en_rango(cur):
+    cur.execute("SELECT count(*) FROM gold.hecho_eventos_partido WHERE franja_15min NOT BETWEEN 0 AND 6")
     assert cur.fetchone()[0] == 0
 
 
 def test_sin_filas_en_particion_default(cur):
-    cur.execute("SELECT count(*) FROM gold.fact_events_default")
+    cur.execute("SELECT count(*) FROM gold.hecho_eventos_partido_default")
     assert cur.fetchone()[0] == 0
 
 

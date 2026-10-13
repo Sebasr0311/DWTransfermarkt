@@ -15,24 +15,24 @@ BASELINE_CHECKSUMS = {
 }
 
 BASELINE_AGGREGATIONS = {
-    "agg_player_season": (
-        "SELECT count(*), sum(partidos), sum(goles), sum(asistencias), sum(minutos) FROM gold.agg_player_season",
-        (93595, Decimal("1813294"), Decimal("168551"), Decimal("133214"), Decimal("124172145")),
+    "agg_jugador_temporada_liga": (
+        "SELECT sum(partidos), sum(goles), sum(asistencias), sum(minutos) FROM gold.agg_jugador_temporada_liga",
+        (Decimal("1813294"), Decimal("168551"), Decimal("133214"), Decimal("124172145")),
     ),
-    "agg_club_season": (
-        "SELECT count(*), sum(partidos), sum(goles_favor), sum(goles_contra), sum(puntos), sum(valor_plantilla) FROM gold.agg_club_season",
-        (5321, Decimal("145204"), Decimal("202819"), Decimal("202819"), Decimal("200373"), Decimal("448668243000.00")),
+    "agg_club_temporada": (
+        "SELECT sum(partidos), sum(goles_favor), sum(goles_contra), sum(puntos), sum(valor_plantilla) FROM gold.agg_club_temporada",
+        (Decimal("145204"), Decimal("202819"), Decimal("202819"), Decimal("200373"), Decimal("448668243000.00")),
     ),
-    "agg_events_15min": (
-        "SELECT count(*), sum(eventos) FROM gold.agg_events_15min",
+    "agg_eventos_15min": (
+        "SELECT count(*), sum(total_eventos) FROM gold.agg_eventos_15min",
         (313, Decimal("1032318")),
     ),
-    "agg_discipline_ref": (
-        "SELECT count(*), sum(partidos), sum(amarillas), sum(rojas), sum(minutos) FROM gold.agg_discipline_ref",
-        (5353, Decimal("64761"), Decimal("264922"), Decimal("6368"), Decimal("124172145")),
+    "agg_disciplina_arbitro": (
+        "SELECT sum(partidos), sum(amarillas), sum(rojas), sum(minutos) FROM gold.agg_disciplina_arbitro",
+        (Decimal("64761"), Decimal("264922"), Decimal("6368"), Decimal("124172145")),
     ),
-    "agg_home_away": (
-        "SELECT count(*), sum(partidos), sum(victorias_local), sum(empates), sum(victorias_visitante) FROM gold.agg_home_away",
+    "agg_local_visitante": (
+        "SELECT count(*), sum(partidos), sum(victorias_local), sum(empates), sum(victorias_visitante) FROM gold.agg_local_visitante",
         (575, Decimal("72602"), Decimal("32692"), Decimal("17433"), Decimal("22477")),
     ),
 }
@@ -82,10 +82,10 @@ def test_integridad_referencial_silver_y_gold(cur):
         "SELECT count(*) FROM silver.game_events c LEFT JOIN silver.games p USING (game_id) WHERE p.game_id IS NULL",
         "SELECT count(*) FROM silver.game_events c LEFT JOIN silver.clubs p USING (club_id) WHERE p.club_id IS NULL",
         "SELECT count(*) FROM silver.player_valuations c LEFT JOIN silver.players p USING (player_id) WHERE p.player_id IS NULL",
-        "SELECT count(*) FROM gold.fact_events f LEFT JOIN gold.dim_game d USING (game_key) WHERE d.game_key IS NULL",
-        "SELECT count(*) FROM gold.fact_appearances f LEFT JOIN gold.dim_game d USING (game_key) WHERE d.game_key IS NULL",
-        "SELECT count(*) FROM gold.fact_appearances f LEFT JOIN gold.dim_player d USING (player_key) WHERE d.player_key IS NULL",
-        "SELECT count(*) FROM gold.fact_valuations f LEFT JOIN gold.dim_player d USING (player_key) WHERE d.player_key IS NULL",
+        "SELECT count(*) FROM gold.hecho_eventos_partido f LEFT JOIN gold.dim_partido d USING (partido_key) WHERE d.partido_key IS NULL",
+        "SELECT count(*) FROM gold.hecho_rendimiento_jugador f LEFT JOIN gold.dim_partido d USING (partido_key) WHERE d.partido_key IS NULL",
+        "SELECT count(*) FROM gold.hecho_rendimiento_jugador f LEFT JOIN gold.dim_jugador d USING (jugador_key) WHERE d.jugador_key IS NULL",
+        "SELECT count(*) FROM gold.hecho_valoraciones_mercado f LEFT JOIN gold.dim_jugador d USING (jugador_key) WHERE d.jugador_key IS NULL",
     ]
     for q in consultas:
         cur.execute(q)
@@ -113,6 +113,6 @@ def test_agregaciones_oro_inalteradas(cur, vista):
 
 
 def test_cero_filas_en_particion_default(cur):
-    """La partición default de gold.fact_events no debe tener filas."""
-    cur.execute("SELECT count(*) FROM gold.fact_events_default")
+    """La partición default de gold.hecho_eventos_partido no debe tener filas."""
+    cur.execute("SELECT count(*) FROM gold.hecho_eventos_partido_default")
     assert cur.fetchone()[0] == 0

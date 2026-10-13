@@ -19,12 +19,17 @@ def _bronze_columns(cur, table: str) -> list[str]:
     return [r[0] for r in cur.fetchall()]
 
 
-def _count_lines(path) -> int:
-    n = 0
-    with open(path, "rb") as f:
-        for block in iter(lambda: f.read(1 << 20), b""):
-            n += block.count(b"\n")
-    return n
+import csv
+
+
+def _count_csv_rows(path, encoding: str = "utf-8") -> int:
+    """Cuenta filas lógicas de un CSV respetando campos multilínea entre comillas."""
+    try:
+        with open(path, "r", encoding=encoding, errors="replace") as f:
+            reader = csv.reader(f)
+            return max(sum(1 for _ in reader) - 1, 0)
+    except Exception:
+        return 0
 
 
 def _load_with_encoding(conn, table, path, cols, chunk_size, encoding, load_id):
@@ -84,7 +89,7 @@ def run(run_id: str, chunk_size: int = config.CHUNK_SIZE) -> dict:
             if rows is None:
                 audit.finish(audit_id, status="ERROR")
                 raise RuntimeError(f"No se pudo decodificar {path}")
-            skipped = max(_count_lines(path) - 1 - rows, 0)  # aproximado (saltos de línea dentro de comillas)
+            skipped = max(_count_csv_rows(path, enc) - rows, 0)
             audit.finish(audit_id, read=rows + skipped, transformed=rows, discarded=skipped, inserted=rows)
             print(f"[bronze] {table}: {rows} filas, {skipped} líneas omitidas, reintentos={retried}, "
                   f"columnas faltantes={missing}, columnas extra ignoradas={extra}")

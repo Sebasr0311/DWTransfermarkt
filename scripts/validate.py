@@ -28,35 +28,35 @@ BASELINE_CHECKSUMS = {
 }
 
 BASELINE_AGGREGATIONS = {
-    "agg_player_season": (
-        "SELECT count(*), sum(partidos), sum(goles), sum(asistencias), sum(minutos) FROM gold.agg_player_season",
-        (93595, Decimal("1813294"), Decimal("168551"), Decimal("133214"), Decimal("124172145")),
+    "agg_jugador_temporada_liga": (
+        "SELECT sum(partidos), sum(goles), sum(asistencias), sum(minutos) FROM gold.agg_jugador_temporada_liga",
+        (Decimal("1813294"), Decimal("168551"), Decimal("133214"), Decimal("124172145")),
     ),
-    "agg_club_season": (
-        "SELECT count(*), sum(partidos), sum(goles_favor), sum(goles_contra), sum(puntos), sum(valor_plantilla) FROM gold.agg_club_season",
-        (5321, Decimal("145204"), Decimal("202819"), Decimal("202819"), Decimal("200373"), Decimal("448668243000.00")),
+    "agg_club_temporada": (
+        "SELECT sum(partidos), sum(goles_favor), sum(goles_contra), sum(puntos), sum(valor_plantilla) FROM gold.agg_club_temporada",
+        (Decimal("145204"), Decimal("202819"), Decimal("202819"), Decimal("200373"), Decimal("448668243000.00")),
     ),
-    "agg_events_15min": (
-        "SELECT count(*), sum(eventos) FROM gold.agg_events_15min",
+    "agg_eventos_15min": (
+        "SELECT count(*), sum(total_eventos) FROM gold.agg_eventos_15min",
         (313, Decimal("1032318")),
     ),
-    "agg_discipline_ref": (
-        "SELECT count(*), sum(partidos), sum(amarillas), sum(rojas), sum(minutos) FROM gold.agg_discipline_ref",
-        (5353, Decimal("64761"), Decimal("264922"), Decimal("6368"), Decimal("124172145")),
+    "agg_disciplina_arbitro": (
+        "SELECT sum(partidos), sum(amarillas), sum(rojas), sum(minutos) FROM gold.agg_disciplina_arbitro",
+        (Decimal("64761"), Decimal("264922"), Decimal("6368"), Decimal("124172145")),
     ),
-    "agg_home_away": (
-        "SELECT count(*), sum(partidos), sum(victorias_local), sum(empates), sum(victorias_visitante) FROM gold.agg_home_away",
+    "agg_local_visitante": (
+        "SELECT count(*), sum(partidos), sum(victorias_local), sum(empates), sum(victorias_visitante) FROM gold.agg_local_visitante",
         (575, Decimal("72602"), Decimal("32692"), Decimal("17433"), Decimal("22477")),
     ),
 }
 
 CONSULTAS_GOLD = {
-    "goleadores por temporada": "SELECT player_key, season, goles FROM gold.agg_player_season ORDER BY goles DESC LIMIT 20",
-    "tabla de posiciones": "SELECT club_key, puntos FROM gold.agg_club_season WHERE season = (SELECT max(season) FROM gold.agg_club_season) ORDER BY puntos DESC LIMIT 20",
-    "eventos por franja de 15 min": "SELECT minute_bucket, count(*) FROM gold.fact_events GROUP BY 1 ORDER BY 1",
-    "tarjetas por árbitro": "SELECT referee_key, sum(tarjetas_por_90) FROM gold.agg_discipline_ref GROUP BY 1 ORDER BY 2 DESC NULLS LAST LIMIT 20",
-    "local vs visitante": "SELECT * FROM gold.agg_home_away LIMIT 50",
-    "eventos por competición (join)": "SELECT dc.name, count(*) FROM gold.fact_events fe JOIN gold.dim_competition dc USING (competition_key) GROUP BY 1 ORDER BY 2 DESC LIMIT 20",
+    "goleadores por temporada y liga": "SELECT jugador_key, competicion_key, temporada, goles FROM gold.agg_jugador_temporada_liga ORDER BY goles DESC LIMIT 20",
+    "tabla de posiciones": "SELECT club_key, puntos FROM gold.agg_club_temporada WHERE temporada = (SELECT max(temporada) FROM gold.agg_club_temporada) ORDER BY puntos DESC LIMIT 20",
+    "eventos por franja de 15 min": "SELECT franja_15min, count(*) FROM gold.hecho_eventos_partido GROUP BY 1 ORDER BY 1",
+    "tarjetas por árbitro": "SELECT arbitro_key, sum(tarjetas_por_90) FROM gold.agg_disciplina_arbitro GROUP BY 1 ORDER BY 2 DESC NULLS LAST LIMIT 20",
+    "local vs visitante": "SELECT * FROM gold.agg_local_visitante LIMIT 50",
+    "eventos por competición (join)": "SELECT dc.nombre, count(*) FROM gold.hecho_eventos_partido fe JOIN gold.dim_competicion dc USING (competicion_key) GROUP BY 1 ORDER BY 2 DESC LIMIT 20",
 }
 
 TAMANOS = """

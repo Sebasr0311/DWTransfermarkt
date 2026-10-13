@@ -9,7 +9,7 @@ Este documento describe el método, justificación, arquitectura, integridad, re
 El Data Warehouse `DWTransfermarkt` fue cargado y validado a partir de los datos reales extraídos de la plataforma Transfermarkt (vía datasets abiertos de Kaggle / `dcaribou/transfermarkt-datasets`). 
 
 El estado base real en la capa `silver` suma **3.625.525 registros** distribuidos en 7 tablas de negocio. Sin embargo, los requerimientos arquitectónicos de la propuesta estipulan una prueba de estrés de volumetría objetivo de **10.565.088 registros**, con el fin de evaluar:
-- Particionamiento por rango en tablas de hechos masivas (`gold.fact_events`).
+- Particionamiento por rango en tablas de hechos masivas (`gold.hecho_eventos_partido`).
 - Desempeño y concurrencia en vistas materializadas (`gold.agg_*`).
 - Tiempos de respuesta sub-segundo en consultas analíticas y reportes OLAP.
 - Comportamiento de índices y consumo físico en disco bajo volúmenes de producción a gran escala.
@@ -20,7 +20,7 @@ Para cubrir la brecha de **6.939.563 registros** sin contaminar ni degradar los 
 
 ## 2. Metodología: Clonación Controlada
 
-A diferencia de generadores sintéticos puramente aleatorios que generan datos incoherentes o violan distribuciones reales (por ejemplo, partidos de 50 goles o jugadores nacidos en el año 3000), la **clonación controlada** conserva fielmente las propiedades estadísticas y distribuciones del fútbol profesional:
+A diferencia de generadores puramente aleatorios que producen datos incoherentes o violan distribuciones reales (por ejemplo, partidos de 50 goles o futbolistas nacidos en el año 3000), la **clonación controlada** conserva fielmente las propiedades estadísticas y distribuciones del fútbol profesional:
 
 1. **Partidos Sintéticos (`silver.games`):**
    - Se seleccionan partidos reales como plantilla determinista.
@@ -55,7 +55,7 @@ Todo registro en el sistema cuenta con etiquetado explícito y permanente:
   - Columna `origin VARCHAR(10) NOT NULL DEFAULT 'real'` con restricción `CHECK (origin IN ('real', 'sintetico'))`.
   - Columna `synthetic_batch UUID NULL` que almacena el identificador único del lote de expansión (`run_id`).
 - **Capa Oro (`gold`):**
-  - Columna `is_synthetic BOOLEAN NOT NULL DEFAULT FALSE` en `dim_game`, `fact_events`, `fact_appearances` y `fact_valuations`.
+  - Columna `es_sintetico BOOLEAN NOT NULL DEFAULT FALSE` en `dim_partido`, `hecho_eventos_partido`, `hecho_rendimiento_jugador` y `hecho_valoraciones_mercado`.
 - **Auditoría (`meta.etl_audit`):**
   - Cada fase de la expansión se audita con `layer = 'expand'`, identificando filas leídas, insertadas y estado `OK`.
 
@@ -67,11 +67,11 @@ Todo registro en el sistema cuenta con etiquetado explícito y permanente:
    - Todos los partidos sintéticos apuntan a competiciones y clubes reales válidos.
    - Todos los eventos y apariciones sintéticos apuntan a partidos sintéticos existentes y a jugadores/clubes reales existentes.
    - Todas las valoraciones apuntan a jugadores reales existentes.
-   - En la capa dimensional `gold`, todas las dimensiones (`dim_competition`, `dim_club`, `dim_player`, `dim_referee`, `dim_event_type`) y dimensiones de contexto (`dim_date`, `dim_game`) resuelven el 100% de las llaves sustitutas.
+   - En la capa dimensional `gold`, todas las dimensiones (`dim_competicion`, `dim_club`, `dim_jugador`, `dim_arbitro`, `dim_tipo_evento`) y dimensiones de contexto (`dim_fecha`, `dim_partido`) resuelven el 100% de las llaves sustitutas.
 2. **Cero Duplicados:**
    - Se respeta estrictamente la unicidad de las claves primarias y de negocio en cada capa.
 3. **Aislamiento Analítico:**
-   - Las vistas materializadas de negocio (`gold.agg_player_season`, `gold.agg_club_season`, `gold.agg_events_15min`, `gold.agg_discipline_ref`, `gold.agg_home_away`) filtran explícitamente `is_synthetic = FALSE`.
+   - Las vistas materializadas de negocio (`gold.agg_jugador_temporada_liga`, `gold.agg_club_temporada`, `gold.agg_eventos_15min`, `gold.agg_disciplina_arbitro`, `gold.agg_local_visitante`) filtran explícitamente `es_sintetico = FALSE`.
    - Las métricas de goleadores, puntos de campeonato, minutos jugados y tarjetas coinciden **bit a bit** antes y después de la expansión.
 4. **Verificación por Checksum:**
    - Cada tabla real se valida mediante conteo y suma de hash `sum(hashtext(ROW(...)::text)::bigint)` sobre las columnas reales.
@@ -83,14 +83,14 @@ Todo registro en el sistema cuenta con etiquetado explícito y permanente:
 El proceso es completamente idempotente y reversible:
 - **Idempotencia:** Antes de ejecutar cualquier generación, `expand` ejecuta automáticamente un rollback de registros sintéticos anteriores.
 - **Rollback:** El comando:
-  ```bash
+  ```powershell
   python -m etl.run_pipeline --layer expand --rollback
   ```
-  elimina en cascada todos los registros con `origin = 'sintetico'` en `silver` y con `is_synthetic = TRUE` en `gold`, refresca las agregaciones y restituye la base de datos a sus **3.625.525 registros reales intactos**.
+  elimina en cascada todos los registros con `origin = 'sintetico'` en `silver` y con `es_sintetico = TRUE` en `gold`, refresca las agregaciones y restituye la base de datos a sus **3.625.525 registros reales intactos**.
 
 ---
 
 ## 6. Limitaciones del Conjunto Sintético
 
 - **Propósito:** Los datos sintéticos fueron creados exclusivamente para evaluación de estrés físico, rendimiento de consultas, planes de ejecución e índices en bases de datos a escala de 10,5+ millones de registros.
-- **Analítica de Negocio:** No deben emplearse datos sintéticos para inferir conclusiones estadísticas, históricas ni deportivas sobre equipos o jugadores. Toda analítica de negocio se canaliza a través de las vistas agregadas filtradas o consultas con `WHERE is_synthetic = FALSE`.
+- **Analítica de Negocio:** No deben emplearse datos sintéticos para inferir conclusiones estadísticas, históricas ni deportivas sobre equipos o jugadores. Toda analítica de negocio se canaliza a través de las vistas agregadas filtradas o consultas con `WHERE es_sintetico = FALSE`.

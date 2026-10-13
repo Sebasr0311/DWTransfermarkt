@@ -20,10 +20,10 @@ LARGE_TABLES = [
     "silver.appearances",
     "silver.game_events",
     "silver.player_valuations",
-    "gold.dim_game",
-    "gold.fact_events",
-    "gold.fact_appearances",
-    "gold.fact_valuations",
+    "gold.dim_partido",
+    "gold.hecho_eventos_partido",
+    "gold.hecho_rendimiento_jugador",
+    "gold.hecho_valoraciones_mercado",
 ]
 
 
@@ -121,14 +121,14 @@ def rollback(run_id: str | None = None) -> dict:
     print(f"[rollback] Iniciando reversión de datos sintéticos (batch={batch_id})...")
     try:
         # 1. Limpieza en gold (hechos y dimensiones sintéticas)
-        cur.execute("DELETE FROM gold.fact_events WHERE is_synthetic = TRUE")
-        borradas["gold.fact_events"] = cur.rowcount
-        cur.execute("DELETE FROM gold.fact_appearances WHERE is_synthetic = TRUE")
-        borradas["gold.fact_appearances"] = cur.rowcount
-        cur.execute("DELETE FROM gold.fact_valuations WHERE is_synthetic = TRUE")
-        borradas["gold.fact_valuations"] = cur.rowcount
-        cur.execute("DELETE FROM gold.dim_game WHERE is_synthetic = TRUE")
-        borradas["gold.dim_game"] = cur.rowcount
+        cur.execute("DELETE FROM gold.hecho_eventos_partido WHERE es_sintetico = TRUE")
+        borradas["gold.hecho_eventos_partido"] = cur.rowcount
+        cur.execute("DELETE FROM gold.hecho_rendimiento_jugador WHERE es_sintetico = TRUE")
+        borradas["gold.hecho_rendimiento_jugador"] = cur.rowcount
+        cur.execute("DELETE FROM gold.hecho_valoraciones_mercado WHERE es_sintetico = TRUE")
+        borradas["gold.hecho_valoraciones_mercado"] = cur.rowcount
+        cur.execute("DELETE FROM gold.dim_partido WHERE es_sintetico = TRUE")
+        borradas["gold.dim_partido"] = cur.rowcount
 
         # 2. Limpieza en silver (en orden inverso de dependencias FK)
         cur.execute("DELETE FROM silver.game_events WHERE origin = 'sintetico'")
@@ -383,12 +383,12 @@ def expand(run_id: str | None = None, target_total: int = 10565088) -> dict:
                 print(f"[expand] Advertencia al optimizar {t}: {e}")
 
         # 10. Validar partición por defecto
-        cur.execute("SELECT count(*) FROM gold.fact_events_default")
+        cur.execute("SELECT count(*) FROM gold.hecho_eventos_partido_default")
         def_cnt = cur.fetchone()[0]
         if def_cnt > 0:
-            print(f"[expand] ALERTA: gold.fact_events_default contiene {def_cnt} filas")
+            print(f"[expand] ALERTA: gold.hecho_eventos_partido_default contiene {def_cnt} filas")
         else:
-            print("[expand] OK: gold.fact_events_default tiene 0 filas")
+            print("[expand] OK: gold.hecho_eventos_partido_default tiene 0 filas")
 
         return {
             "batch_id": batch_id,

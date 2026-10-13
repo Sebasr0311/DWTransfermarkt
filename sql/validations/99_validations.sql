@@ -30,31 +30,31 @@ SELECT * FROM (
     FROM silver.player_valuations c LEFT JOIN silver.players p ON p.player_id = c.player_id WHERE p.player_id IS NULL
 
   -- Huérfanos en gold
-  UNION ALL SELECT 'orphans gold.fact_events->dim_game', count(*)
-    FROM gold.fact_events f LEFT JOIN gold.dim_game d ON d.game_key = f.game_key WHERE d.game_key IS NULL
-  UNION ALL SELECT 'orphans gold.fact_events->dim_club', count(*)
-    FROM gold.fact_events f LEFT JOIN gold.dim_club d ON d.club_key = f.club_key WHERE d.club_key IS NULL
-  UNION ALL SELECT 'orphans gold.fact_events->dim_event_type', count(*)
-    FROM gold.fact_events f LEFT JOIN gold.dim_event_type d ON d.event_type_key = f.event_type_key WHERE d.event_type_key IS NULL
-  UNION ALL SELECT 'orphans gold.fact_appearances->dim_game', count(*)
-    FROM gold.fact_appearances f LEFT JOIN gold.dim_game d ON d.game_key = f.game_key WHERE d.game_key IS NULL
-  UNION ALL SELECT 'orphans gold.fact_appearances->dim_player', count(*)
-    FROM gold.fact_appearances f LEFT JOIN gold.dim_player d ON d.player_key = f.player_key WHERE d.player_key IS NULL
-  UNION ALL SELECT 'orphans gold.fact_appearances->dim_club', count(*)
-    FROM gold.fact_appearances f LEFT JOIN gold.dim_club d ON d.club_key = f.club_key WHERE d.club_key IS NULL
-  UNION ALL SELECT 'orphans gold.fact_valuations->dim_player', count(*)
-    FROM gold.fact_valuations f LEFT JOIN gold.dim_player d ON d.player_key = f.player_key WHERE d.player_key IS NULL
+  UNION ALL SELECT 'orphans gold.hecho_eventos_partido->dim_partido', count(*)
+    FROM gold.hecho_eventos_partido f LEFT JOIN gold.dim_partido d ON d.partido_key = f.partido_key WHERE d.partido_key IS NULL
+  UNION ALL SELECT 'orphans gold.hecho_eventos_partido->dim_club', count(*)
+    FROM gold.hecho_eventos_partido f LEFT JOIN gold.dim_club d ON d.club_key = f.club_key WHERE d.club_key IS NULL
+  UNION ALL SELECT 'orphans gold.hecho_eventos_partido->dim_tipo_evento', count(*)
+    FROM gold.hecho_eventos_partido f LEFT JOIN gold.dim_tipo_evento d ON d.tipo_evento_key = f.tipo_evento_key WHERE d.tipo_evento_key IS NULL
+  UNION ALL SELECT 'orphans gold.hecho_rendimiento_jugador->dim_partido', count(*)
+    FROM gold.hecho_rendimiento_jugador f LEFT JOIN gold.dim_partido d ON d.partido_key = f.partido_key WHERE d.partido_key IS NULL
+  UNION ALL SELECT 'orphans gold.hecho_rendimiento_jugador->dim_jugador', count(*)
+    FROM gold.hecho_rendimiento_jugador f LEFT JOIN gold.dim_jugador d ON d.jugador_key = f.jugador_key WHERE d.jugador_key IS NULL
+  UNION ALL SELECT 'orphans gold.hecho_rendimiento_jugador->dim_club', count(*)
+    FROM gold.hecho_rendimiento_jugador f LEFT JOIN gold.dim_club d ON d.club_key = f.club_key WHERE d.club_key IS NULL
+  UNION ALL SELECT 'orphans gold.hecho_valoraciones_mercado->dim_jugador', count(*)
+    FROM gold.hecho_valoraciones_mercado f LEFT JOIN gold.dim_jugador d ON d.jugador_key = f.jugador_key WHERE d.jugador_key IS NULL
 
   -- Duplicados por llave de negocio
   UNION ALL SELECT 'dups silver.games', count(*) FROM (SELECT game_id FROM silver.games GROUP BY 1 HAVING count(*) > 1) x
   UNION ALL SELECT 'dups silver.appearances', count(*) FROM (SELECT appearance_id FROM silver.appearances GROUP BY 1 HAVING count(*) > 1) x
   UNION ALL SELECT 'dups silver.game_events', count(*) FROM (SELECT game_event_id FROM silver.game_events GROUP BY 1 HAVING count(*) > 1) x
   UNION ALL SELECT 'dups silver.player_valuations', count(*) FROM (SELECT player_id, valuation_date FROM silver.player_valuations GROUP BY 1,2 HAVING count(*) > 1) x
-  UNION ALL SELECT 'dups gold.dim_game', count(*) FROM (SELECT game_id FROM gold.dim_game GROUP BY 1 HAVING count(*) > 1) x
-  UNION ALL SELECT 'dups gold.fact_events', count(*) FROM (SELECT game_event_id, date_key FROM gold.fact_events GROUP BY 1,2 HAVING count(*) > 1) x
-  UNION ALL SELECT 'dups gold.fact_appearances', count(*) FROM (SELECT appearance_id FROM gold.fact_appearances GROUP BY 1 HAVING count(*) > 1) x
-  UNION ALL SELECT 'dups gold.fact_valuations', count(*) FROM (SELECT player_key, date_key FROM gold.fact_valuations GROUP BY 1,2 HAVING count(*) > 1) x
-  UNION ALL SELECT 'dups gold.dim_player', count(*) FROM (SELECT player_id FROM gold.dim_player GROUP BY 1 HAVING count(*) > 1) x
+  UNION ALL SELECT 'dups gold.dim_partido', count(*) FROM (SELECT partido_id FROM gold.dim_partido GROUP BY 1 HAVING count(*) > 1) x
+  UNION ALL SELECT 'dups gold.hecho_eventos_partido', count(*) FROM (SELECT evento_partido_id, fecha_key FROM gold.hecho_eventos_partido GROUP BY 1,2 HAVING count(*) > 1) x
+  UNION ALL SELECT 'dups gold.hecho_rendimiento_jugador', count(*) FROM (SELECT aparicion_id FROM gold.hecho_rendimiento_jugador GROUP BY 1 HAVING count(*) > 1) x
+  UNION ALL SELECT 'dups gold.hecho_valoraciones_mercado', count(*) FROM (SELECT jugador_key, fecha_key FROM gold.hecho_valoraciones_mercado GROUP BY 1,2 HAVING count(*) > 1) x
+  UNION ALL SELECT 'dups gold.dim_jugador', count(*) FROM (SELECT jugador_id FROM gold.dim_jugador GROUP BY 1 HAVING count(*) > 1) x
 
   -- Fechas obligatorias sin NULL
   UNION ALL SELECT 'nulls silver.games.game_date', count(*) FROM silver.games WHERE game_date IS NULL
@@ -72,6 +72,6 @@ SELECT * FROM (
   UNION ALL SELECT 'invalid silver.game_events.origin', count(*) FROM silver.game_events WHERE origin NOT IN ('real', 'sintetico')
   UNION ALL SELECT 'invalid silver.player_valuations.origin', count(*) FROM silver.player_valuations WHERE origin NOT IN ('real', 'sintetico')
 
-  -- Partición default de gold.fact_events vacía
-  UNION ALL SELECT 'gold.fact_events default partition rows', count(*) FROM gold.fact_events_default
+  -- Partición default de gold.hecho_eventos_partido vacía
+  UNION ALL SELECT 'gold.hecho_eventos_partido default partition rows', count(*) FROM gold.hecho_eventos_partido_default
 ) v ORDER BY check_name;
